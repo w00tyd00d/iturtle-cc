@@ -1,4 +1,4 @@
-# ITurtle: Iterative Turtle Library
+# ITurtle: The Iterative Turtle Library
 
 ITurtle is a wrapper library built to add iterative functionality ComputerCraft turtles in a declarative fashion. Many of the default turtle methods have been given a `count` parameter to allow repetition of the same instruction, along with the addition of many new quality of life functions to aid in complex turtle program development.
 <br>
