@@ -38,7 +38,7 @@ Check out the API [documentation](https://github.com/w00tyd00d/iturtle-cc/wiki) 
 
 ## Installation
 
-You can download this repo as a .zip file and use it as a datapack. If you're unsure how to install datapacks, read the tutorial on the [Minecraft wiki](https://minecraft.fandom.com/wiki/Tutorials/Installing_a_data_pack).
+You can download this repo as a .zip file and use it as a datapack. If you're unsure how to install datapacks, read the tutorial on the [Minecraft wiki](https://minecraft.wiki/w/Tutorials/Installing_a_data_pack).
 
 Alternatively, you can download the source file directly using this command on any turtle in-game.
 ```
