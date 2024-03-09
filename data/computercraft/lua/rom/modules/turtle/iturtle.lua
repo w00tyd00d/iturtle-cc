@@ -68,7 +68,6 @@ local function guard_clause(count)
         printError("ITurtle module can only be used on turtle computers.")
         return
     elseif count < 0 then
-        -- printError("Count must be a positive integer >= 0.")
         return
     end
     
@@ -369,16 +368,10 @@ local function _move(count, action)
         if action == "turnLeft" then _turn_direction(-1) end
         if action == "turnRight" then _turn_direction(1) end
 
-        print("Executing"..action)
-
         if not turtle[action]() then
             faults = faults + 1
             if action == "turnLeft" then _turn_direction(1) end
             if action == "turnRight" then _turn_direction(-1) end
-        -- elseif action == "turnLeft" then
-        --     _turn_direction(-1)
-        -- elseif action == "turnRight" then
-        --     _turn_direction(1)
         end
     end
 
