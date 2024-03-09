@@ -42,6 +42,6 @@ You can download this repo as a .zip file and use it as a datapack. If you're un
 
 Alternatively, you can download the source file directly using this command on any turtle in-game.
 ```
-pastebin get NcpFJHhu iturtle.lua
+pastebin get wui7eheN iturtle.lua
 ```
 Just bear in mind the datapack version gets automatically inserted into every turtle's ROM directory, and therefore doesn't take up memory on their drive.
