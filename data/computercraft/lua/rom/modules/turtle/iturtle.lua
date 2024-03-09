@@ -1,10 +1,10 @@
--- ITurtle v1.0 made by w00tyd00d
+-- ITurtle v1.0.1 made by w00tyd00d
 
 -- Simple turtle library wrapper for
 -- running iterative movement scripts
 -- in a declarative fashion.
 
-local VERSION = 1.0
+local VERSION = "1.0.1"
 local DATA_FILE = "/.iturtle.dat"
 local API = {}
 
@@ -208,7 +208,7 @@ function API.shiftLeft(count, dig)
     local faults = 0
     local res, total
 
-    if count == 0 then return faults end
+    if count == 0 then return faults, 0 end
 
     faults = faults + API.turnLeft()
 
@@ -231,7 +231,7 @@ function API.shiftRight(count, dig)
     local faults = 0
     local res, total
 
-    if count == 0 then return faults end
+    if count == 0 then return faults, 0 end
 
     faults = faults + API.turnRight()
 
@@ -366,12 +366,19 @@ local function _move(count, action)
     local faults = 0
 
     for i=1,count do
+        if action == "turnLeft" then _turn_direction(-1) end
+        if action == "turnRight" then _turn_direction(1) end
+
+        print("Executing"..action)
+
         if not turtle[action]() then
             faults = faults + 1
-        elseif action == "turnLeft" then
-            _turn_direction(-1)
-        elseif action == "turnRight" then
-            _turn_direction(1)
+            if action == "turnLeft" then _turn_direction(1) end
+            if action == "turnRight" then _turn_direction(-1) end
+        -- elseif action == "turnLeft" then
+        --     _turn_direction(-1)
+        -- elseif action == "turnRight" then
+        --     _turn_direction(1)
         end
     end
 
