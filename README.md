@@ -27,14 +27,14 @@ t.loopSwap(mineLayer, stageNewLayer, 100)
 
 Features:
 * A `count` parameter added to many default turtle methods
-* Extra movement functions pre-coded into the library for convenience, such as turnAroundRight()
+* Extra movement functions pre-coded into the library for convenience, such as `turnAroundRight()`
 * An easy way to register/manipulate/query your turtle's facing cardinal direction
 * Various methods for looping entire functions
 * And more!
 
 Check out the API [documentation](https://github.com/w00tyd00d/iturtle-cc/wiki) to learn more!
 
-<br>
+<br>    
 
 ## Installation
 
