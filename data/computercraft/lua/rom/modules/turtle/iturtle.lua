@@ -6,9 +6,16 @@
 
 local VERSION = "1.0.1"
 local DATA_FILE = "/.iturtle.dat"
+local ARGS = {...}
 local API = {}
 
 local CARDINAL_DIRECTIONS = {"north", "east", "south", "west"}
+local OPPOSITE_DIRECTIONS = {
+    north = "south",
+    east = "west",
+    south = "north",
+    west = "east"
+}
 
 local _swap_stack = {}
 local _timeout_stack = {}
@@ -338,14 +345,93 @@ function API.setDirection(direction)
 
     local diff = math.abs(_current_direction - dir_idx)
     if diff == 3 then
-        if _current_direction == 1 then API.turnLeft() end
-        if _current_direction == 4 then API.turnRight() end
+        if _current_direction == 1 then
+            API.turnLeft()
+        elseif _current_direction == 4 then
+            API.turnRight()
+        end
     else
         if dir_idx > _current_direction then API.turnRight(diff) end
         if dir_idx < _current_direction then API.turnLeft(diff) end
     end
 
     return API.getDirection() == direction
+end
+
+function API.navigatePath(end_block, path_block, vert_block)
+    if not guard_clause() then return end
+
+    if not _current_direction then
+        printError("No direction has been registered!")
+        return
+    end
+
+    end_block = end_block or "minecraft:chiseled_stone_bricks"
+    vert_block = vert_block or "minecraft:soul_sand"
+
+    local direction = "forward"
+    local block_data = API.blockDataDown
+
+    API.loop(function()
+        local block = block_data()
+        
+        local function query_next_direction()
+            if path_block and block.name ~= path_block then
+                return
+            end
+
+            if block.state and block.state.facing ~= nil then
+                local cardinal = block.state.facing
+                if block.name == "minecraft:magenta_glazed_terracotta" then
+                    cardinal = OPPOSITE_DIRECTIONS[block.state.facing]
+                end
+                API.setDirection(cardinal)
+            end
+            direction = "forward"
+            block_data = API.blockDataDown
+        end
+
+        if direction == "up" or direction == "down" then
+            if block.name then
+                query_next_direction()
+            end
+        else
+            if block.name == end_block  then
+                return true
+            end
+
+            if not block.name then
+                direction = "down"
+            elseif block.name == vert_block then
+                direction = "up"
+                block_data = API.blockDataUp
+            else
+                query_next_direction()
+            end
+        end
+
+        API[direction]()
+    end)
+end
+
+function API.navigateToPoint(x, y, z, order, reverse)
+    if not guard_clause() then return end
+
+    local gx, gy, gz = gps.locate()
+    if not gx then
+        printError("No stable GPS cluster found!")
+        return
+    end
+
+    local dx = gx - x
+    local dy = gy - y
+    local dz = gz - z
+
+    if order then
+        -- FIRST TRAVEL IN ORDER
+    end
+
+    -- TRAVEL MAKE SMALLEST CHANGES FIRST
 end
 
 
