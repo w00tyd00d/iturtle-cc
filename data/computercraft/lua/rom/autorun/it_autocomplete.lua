@@ -1,12 +1,10 @@
-local completion = require "cc.shell.completion"
+local completion = require("cc.shell.completion")
 
-local DIRECTIONS = {"north", "east", "south", "west"}
-
-local it_tree = {
-    it =        {{"compass", "face", "shift"}, true},
-    compass =   {DIRECTIONS, false},
-    face =      {DIRECTIONS, false},
-    shift =     {{"left", "right"}, true}
+local iturtle_tree =
+{
+    it =        {{"compass", "face"}, true},
+    compass =   {{"north", "east", "south", "west"}, false},
+    face =      {{"north", "east", "south", "west"}, false}
 }
 
 local function choice_impl(text, choices, add_space)
@@ -25,6 +23,8 @@ local function choice_impl(text, choices, add_space)
     return results
 end
 
+-- We technically don't need this anymore, but I'm keeping it in case
+-- of wanting to add branching options in the future
 local function choice_tree(shell, text, previous, tree)
     local prev = previous and previous[#previous]
     if tree[prev] then
@@ -34,5 +34,5 @@ local function choice_tree(shell, text, previous, tree)
 end
 
 shell.setCompletionFunction("rom/programs/turtle/it.lua", completion.build(
-    { choice_tree, it_tree, many = true }
+    { choice_tree, iturtle_tree, many = true }
 ))
