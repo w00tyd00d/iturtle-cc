@@ -13,8 +13,6 @@ if #ARGS == 0 then
     print("Usages:")
     print("it compass <direction>")
     print("it face <direction>")
-    print("it shift <left|right> [count]")
-
     return
 end
 
