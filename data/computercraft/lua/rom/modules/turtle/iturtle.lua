@@ -1,10 +1,10 @@
--- ITurtle v1.0.1 made by w00tyd00d
+-- ITurtle v1.1 made by w00tyd00d
 
 -- Simple turtle library wrapper for
 -- running iterative movement scripts
 -- in a declarative fashion.
 
-local VERSION = "1.0.1"
+local VERSION = "1.1"
 local DATA_FILE = "/.iturtle.dat"
 local ARGS = {...}
 local API = {}
@@ -387,6 +387,7 @@ function API.navigatePath(end_block, path_block, vert_block)
                 end
                 API.setDirection(cardinal)
             end
+            
             direction = "forward"
             block_data = API.blockDataDown
         end
@@ -528,5 +529,6 @@ if fs.exists(DATA_FILE) then
     file.close()
     _current_direction = data.direction
 end
+
 
 return API
