@@ -476,19 +476,27 @@ function API.navigateToPoint(x, y, z, order, persist)
         return
     end
 
+    -- Not necessarily proud of how big this came out lol
+    -- Still works! -W
+
     local sx, sy, sz
-    local dist = {}
+    local cx, cz
     local calibrated
+    local dist = {}
 
     local function refresh_data()
+        print("Refreshing data!")
         sx, sy, sz = gps.locate()
+        
         if not sx then
             printError("No stable GPS cluster found!")
             return
         end
+        
         dist[1] = {"x", x - sx}
         dist[2] = {"y", y - sy}
         dist[3] = {"z", z - sz}
+        
         return true
     end
 
@@ -496,61 +504,56 @@ function API.navigateToPoint(x, y, z, order, persist)
         -- Check if compass is calibrated correctly
         -- to save a lot of headache later
         if action == "forward" and not calibrated then
-            local mx, mz = sx, sz
+            cx, cz = sx, sz
 
-            API.forward()
+            if API.forward() == 1 then return true end
             
             if not refresh_data() then return false, "gps" end
 
-            if sx == mx and sz == mz then return true end
+            if _current_direction == "north" and not sz < cz then return false, "compass" end
+            if _current_direction == "south" and not sz > cz then return false, "compass" end
+            if _current_direction == "east" and not sx > cx then return false, "compass" end
+            if _current_direction == "west" and not sx < cx then return false, "compass" end
 
-            if _current_direction == "north" and not sz < mz then return false, "compass" end
-            if _current_direction == "south" and not sz > mz then return false, "compass" end
-            if _current_direction == "east" and not sx > mx then return false, "compass" end
-            if _current_direction == "west" and not sx < mx then return false, "compass" end
-
+            print("Correctly calibrated!")
             calibrated = true
             count = count - 1
         end
 
         API.loop(function()
-            if persist then
-                API.loop(function()
-                    return API[action]() == 0
-                end)
-            else
-                return API[action]() == 1
-            end
+            return API[action]() == 1
         end, nil, count)
 
         return true
     end
 
-    local function resolve_axis(axis)
+    local function resolve_axis(data)
+        local axis, distance = table.unpack(data)
         local action = "forward"
         local count
-        local total
+
+        print("Resolving axis", axis)
+
+        if distance == 0 then return true end
 
         if axis == "x" then
-            if dist[1][2] == 0 then return true end
-            if dist[1][2] < 0 then API.setDirection("west") end
-            if dist[1][2] > 0 then API.setDirection("east") end
-            count = math.abs(dist[1][2])
+            if distance < 0 then API.setDirection("west") end
+            if distance > 0 then API.setDirection("east") end
+            count = math.abs(distance)
 
         elseif axis == "y" then
-            if dist[2][2] == 0 then return true end
-            if dist[2][2] < 0 then action = "down" end
-            if dist[2][2] > 0 then action = "up" end
-            count = math.abs(dist[2][2])
+            if distance < 0 then action = "down" end
+            if distance > 0 then action = "up" end
+            count = math.abs(distance)
 
         elseif axis == "z" then
-            if dist[3][2] == 0 then return true end
-            if dist[3][2] < 0 then API.setDirection("north") end
-            if dist[3][2] > 0 then API.setDirection("south") end
-            count = math.abs(dist[3][2])
+            if distance < 0 then API.setDirection("north") end
+            if distance > 0 then API.setDirection("south") end
+            count = math.abs(distance)
         end
 
         local res, err = travel(action, count)
+        
         if not res then
             if err == "compass" then
                 printError("Compass not calibrated properly! Ending navigation.")
@@ -558,28 +561,34 @@ function API.navigateToPoint(x, y, z, order, persist)
             return
         end
 
-        if not refresh_data() then return end
-
         return true
     end
 
-    refresh_data()
+    if not refresh_data() then return end
 
     if order then
         for i=1, math.min(3, #order) do
+            local key = {x=1, y=2, z=3}
             local axis = order[i]
-            if not resolve_axis(axis) then
+            if not resolve_axis(dist[key[axis]]) then
                 return false
             end
         end
     end
 
-    while dist[1][2] ~= 0 and dist[2][2] ~= 0 and dist[3][2] ~= 0 do
-        table.sort(dist, function(a,b) return a[2] ~= 0 and a[2] < b[2] end)
-        local axis = dist[1][1]
-        if not resolve_axis(axis) then
-            return false
-        end
+    while dist[1][2] ~= 0 or dist[2][2] ~= 0 or dist[3][2] ~= 0 do
+        print("Sorting axes!")
+        table.sort(dist, function(a,b) return a[2] > b[2] end)
+        if not refresh_data() then return end
+
+        repeat
+            local choice = table.remove(dist)
+            if not resolve_axis(choice) then
+                return false
+            end
+        until dist[1] == nil
+
+        if not refresh_data() then return end
     end
 
     return true

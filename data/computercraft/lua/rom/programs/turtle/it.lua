@@ -24,6 +24,7 @@ if #ARGS == 1 then
     elseif ARGS[1] == "face" then
         print("Sets facing direction based on compass.")
         print("Must be north, south, east, or west.")
+    end
 
     return
 end
