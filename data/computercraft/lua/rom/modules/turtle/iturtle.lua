@@ -9,6 +9,7 @@ local DATA_FILE = "/.iturtle.dat"
 local ARGS = {...}
 local API = {}
 
+
 local CARDINAL_DIRECTIONS = {"north", "east", "south", "west"}
 local OPPOSITE_DIRECTIONS = {
     north = "south",
@@ -358,6 +359,58 @@ function API.setDirection(direction)
     return API.getDirection() == direction
 end
 
+function API.navigateLocal(x, y, z, order)
+    local dist = {
+        {"x", x},
+        {"y", y},
+        {"z", z}
+    }
+
+    local function resolve_axis(axis)
+        if axis == "x" then
+            if dist[1][2] < 0 then
+                local _, total = API.shiftLeft(math.abs(dist[1][2]))
+                dist[1][2] = dist[1][2] + (total - 2)
+            elseif dist[1][2] > 0 then
+                local _, total = API.shiftRight(dist[1][2])
+                dist[1][2] = dist[1][2] - (total - 2)
+            end
+        
+        elseif axis == "y" then
+            if dist[1][2] < 0 then
+                local _, total = API.down(math.abs(dist[1][2]))
+                dist[1][2] = dist[1][2] + total
+            elseif dist[1][2] > 0 then
+                local _, total = API.up(dist[1][2])
+                dist[1][2] = dist[1][2] - total
+            end
+        
+        elseif axis == "z" then
+            if dist[1][2] < 0 then
+                local _, total = API.back(math.abs(dist[1][2]))
+                dist[1][2] = dist[1][2] + total
+            elseif dist[1][2] > 0 then
+                local _, total = API.forward(dist[1][2])
+                dist[1][2] = dist[1][2] - total
+            end
+        end
+    end
+
+    if order then
+        for i=1, math.min(3, #order) do
+            local axis = order[i]
+            resolve_axis(axis)
+        end
+    end
+
+    while dist[1][2] ~= 0 or dist[2][2] ~= 0 or dist[3][2] ~= 0 do
+        table.sort(dist, function(a,b) return a[2] ~= 0 and math.abs(a[2]) < math.abs(b[2]) end)
+        resolve_axis(dist[1][1])
+    end
+
+    return true
+end
+
 function API.navigatePath(end_block, path_block, vert_block)
     if not guard_clause() then return end
 
@@ -415,26 +468,122 @@ function API.navigatePath(end_block, path_block, vert_block)
     end)
 end
 
-function API.navigateToPoint(x, y, z, order, reverse)
+function API.navigateToPoint(x, y, z, order, persist)
     if not guard_clause() then return end
 
-    local gx, gy, gz = gps.locate()
-    if not gx then
-        printError("No stable GPS cluster found!")
+    if not _current_direction then
+        printError("No direction has been registered!")
         return
     end
 
-    local dx = gx - x
-    local dy = gy - y
-    local dz = gz - z
+    local sx, sy, sz
+    local dist = {}
+    local calibrated
 
-    if order then
-        -- FIRST TRAVEL IN ORDER
+    local function refresh_data()
+        sx, sy, sz = gps.locate()
+        if not sx then
+            printError("No stable GPS cluster found!")
+            return
+        end
+        dist[1] = {"x", x - sx}
+        dist[2] = {"y", y - sy}
+        dist[3] = {"z", z - sz}
+        return true
     end
 
-    -- TRAVEL MAKE SMALLEST CHANGES FIRST
-end
+    local function travel(action, count)
+        -- Check if compass is calibrated correctly
+        -- to save a lot of headache later
+        if action == "forward" and not calibrated then
+            local mx, mz = sx, sz
 
+            API.forward()
+            
+            if not refresh_data() then return false, "gps" end
+
+            if sx == mx and sz == mz then return true end
+
+            if _current_direction == "north" and not sz < mz then return false, "compass" end
+            if _current_direction == "south" and not sz > mz then return false, "compass" end
+            if _current_direction == "east" and not sx > mx then return false, "compass" end
+            if _current_direction == "west" and not sx < mx then return false, "compass" end
+
+            calibrated = true
+            count = count - 1
+        end
+
+        API.loop(function()
+            if persist then
+                API.loop(function()
+                    return API[action]() == 0
+                end)
+            else
+                return API[action]() == 1
+            end
+        end, nil, count)
+
+        return true
+    end
+
+    local function resolve_axis(axis)
+        local action = "forward"
+        local count
+        local total
+
+        if axis == "x" then
+            if dist[1][2] == 0 then return true end
+            if dist[1][2] < 0 then API.setDirection("west") end
+            if dist[1][2] > 0 then API.setDirection("east") end
+            count = math.abs(dist[1][2])
+
+        elseif axis == "y" then
+            if dist[2][2] == 0 then return true end
+            if dist[2][2] < 0 then action = "down" end
+            if dist[2][2] > 0 then action = "up" end
+            count = math.abs(dist[2][2])
+
+        elseif axis == "z" then
+            if dist[3][2] == 0 then return true end
+            if dist[3][2] < 0 then API.setDirection("north") end
+            if dist[3][2] > 0 then API.setDirection("south") end
+            count = math.abs(dist[3][2])
+        end
+
+        local res, err = travel(action, count)
+        if not res then
+            if err == "compass" then
+                printError("Compass not calibrated properly! Ending navigation.")
+            end
+            return
+        end
+
+        if not refresh_data() then return end
+
+        return true
+    end
+
+    refresh_data()
+
+    if order then
+        for i=1, math.min(3, #order) do
+            local axis = order[i]
+            if not resolve_axis(axis) then
+                return false
+            end
+        end
+    end
+
+    while dist[1][2] ~= 0 and dist[2][2] ~= 0 and dist[3][2] ~= 0 do
+        table.sort(dist, function(a,b) return a[2] ~= 0 and a[2] < b[2] end)
+        local axis = dist[1][1]
+        if not resolve_axis(axis) then
+            return false
+        end
+    end
+
+    return true
+end
 
 -- Wrapper Methods
 
