@@ -99,19 +99,25 @@ local function _loop(fn, stagingFn, count, swap)
     new_swap_tracker(get_is_swapped())
 
     local iter = 0
+    local result
 
     for i=1,count do
         iter = iter + 1
-        if fn() then break end
-        if stagingFn and i ~= count and stagingFn() then
-            break
+        
+        result = fn()
+        if result then break end
+        
+        if stagingFn and i ~= count then
+            result = stagingFn()
+            if result then break end
         end
+        
         if swap then toggle_swap_tracker() end
     end
 
     pop_swap_tracker()
 
-    return iter
+    return iter, result
 end
 
 local function _loop_until(fn, stagingFn, timeout, swap)
@@ -122,12 +128,21 @@ local function _loop_until(fn, stagingFn, timeout, swap)
     new_timeout_tracker(os.clock() + timeout)
 
     local iter = 0
+    local result
 
     repeat
         iter = iter + 1
-        if fn() then break end
+        
+        result = fn()
+        if result then break end
+        
         if get_is_timed_out() then break end
-        if stagingFn and stagingFn() then break end
+        
+        if stagingFn then
+            result = stagingFn()
+            if result then break end
+        end
+        
         if swap then toggle_swap_tracker() end
     until
         get_is_timed_out()
@@ -135,7 +150,7 @@ local function _loop_until(fn, stagingFn, timeout, swap)
     pop_swap_tracker()
     pop_timeout_tracker()
 
-    return iter
+    return iter, result
 end
 
 function API.loop(fn, stagingFn, count)
