@@ -1,10 +1,16 @@
 local completion = require("cc.shell.completion")
 
+local CARDINALS     = {"north", "east", "south", "west"}
+local MOVE_ACTIONS  = {"left", "right", "forward", "back", "down", "up"}
+
 local iturtle_tree =
+-- tree_node    = {loops, {subcommands}, add_space}
 {
-    it =        {{"compass", "face"}, true},
-    compass =   {{"north", "east", "south", "west"}, false},
-    face =      {{"north", "east", "south", "west"}, false}
+    it          = {nil, {"compass", "face", "navigate", "go"}, true},
+    compass     = {nil, CARDINALS, false},
+    face        = {nil, CARDINALS, false},
+    navigate    = {nil, {"local", "to", "global"}, true},
+    go          = {true, MOVE_ACTIONS, true}
 }
 
 local function choice_impl(text, choices, add_space)
@@ -23,12 +29,15 @@ local function choice_impl(text, choices, add_space)
     return results
 end
 
--- We technically don't need this anymore, but I'm keeping it in case
--- of wanting to add branching options in the future
 local function choice_tree(shell, text, previous, tree)
-    local prev = previous and previous[#previous]
-    if tree[prev] then
-        local choices, add_space = table.unpack(tree[prev])
+    local prev = previous[#previous]
+    local subcmd = previous[2]
+
+    if subcmd and tree[subcmd] and tree[subcmd][1] == true then
+        local choices, add_space = table.unpack(tree[subcmd], 2)
+        return choice_impl(text, choices, add_space)
+    elseif tree[prev] then
+        local choices, add_space = table.unpack(tree[prev], 2)
         return choice_impl(text, choices, add_space)
     end
 end

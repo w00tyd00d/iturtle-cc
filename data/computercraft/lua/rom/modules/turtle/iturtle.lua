@@ -381,32 +381,34 @@ function API.navigateLocal(x, y, z, order)
         {"z", z}
     }
 
-    local function resolve_axis(axis)
+    local function resolve_axis(data)
+        local axis, distance = table.unpack(data)
+
         if axis == "x" then
-            if dist[1][2] < 0 then
-                local _, total = API.shiftLeft(math.abs(dist[1][2]))
-                dist[1][2] = dist[1][2] + (total - 2)
-            elseif dist[1][2] > 0 then
-                local _, total = API.shiftRight(dist[1][2])
-                dist[1][2] = dist[1][2] - (total - 2)
+            if distance < 0 then
+                local fails, total = API.shiftLeft(math.abs(distance))
+                data[2] = distance + (total - 2 - fails)
+            elseif distance > 0 then
+                local fails, total = API.shiftRight(distance)
+                data[2] = distance - (total - 2 - fails)
             end
         
         elseif axis == "y" then
-            if dist[1][2] < 0 then
-                local _, total = API.down(math.abs(dist[1][2]))
-                dist[1][2] = dist[1][2] + total
-            elseif dist[1][2] > 0 then
-                local _, total = API.up(dist[1][2])
-                dist[1][2] = dist[1][2] - total
+            if distance < 0 then
+                local fails, total = API.down(math.abs(distance))
+                data[2] = distance + (total - fails)
+            elseif distance > 0 then
+                local fails, total = API.up(distance)
+                data[2] = distance - (total - fails)
             end
         
         elseif axis == "z" then
-            if dist[1][2] < 0 then
-                local _, total = API.back(math.abs(dist[1][2]))
-                dist[1][2] = dist[1][2] + total
-            elseif dist[1][2] > 0 then
-                local _, total = API.forward(dist[1][2])
-                dist[1][2] = dist[1][2] - total
+            if distance < 0 then
+                local fails, total = API.back(math.abs(distance))
+                data[2] = distance + (total - fails)
+            elseif distance > 0 then
+                local fails, total = API.forward(distance)
+                data[2] = distance - (total - fails)
             end
         end
     end
@@ -419,8 +421,17 @@ function API.navigateLocal(x, y, z, order)
     end
 
     while dist[1][2] ~= 0 or dist[2][2] ~= 0 or dist[3][2] ~= 0 do
-        table.sort(dist, function(a,b) return a[2] ~= 0 and math.abs(a[2]) < math.abs(b[2]) end)
-        resolve_axis(dist[1][1])
+        -- print("Finding smallest axis!")
+        table.sort(dist, function(a,b) return math.abs(a[2]) > math.abs(b[2]) end)
+        local cache = {}
+
+        repeat
+            local choice = table.remove(dist)
+            resolve_axis(choice)
+            table.insert(cache, choice)
+        until dist[1] == nil
+
+        dist = cache
     end
 
     return true
@@ -483,7 +494,7 @@ function API.navigatePath(end_block, path_block, vert_block)
     end)
 end
 
-function API.navigateToPoint(x, y, z, order, persist)
+function API.navigateToPoint(x, y, z, order)
     if not guard_clause() then return end
 
     if not _current_direction then
@@ -495,22 +506,23 @@ function API.navigateToPoint(x, y, z, order, persist)
     -- Still works! -W
 
     local sx, sy, sz
-    local cx, cz
     local calibrated
     local dist = {}
 
     local function refresh_data()
-        print("Refreshing data!")
+        -- print("Refreshing data!")
         sx, sy, sz = gps.locate()
         
         if not sx then
             printError("No stable GPS cluster found!")
             return
         end
-        
+
         dist[1] = {"x", x - sx}
         dist[2] = {"y", y - sy}
         dist[3] = {"z", z - sz}
+        
+        -- print(textutils.serialize(dist))
         
         return true
     end
@@ -518,6 +530,8 @@ function API.navigateToPoint(x, y, z, order, persist)
     local function travel(action, count)
         -- Check if compass is calibrated correctly
         -- to save a lot of headache later
+        local cx, cz
+        
         if action == "forward" and not calibrated then
             cx, cz = sx, sz
 
@@ -525,12 +539,13 @@ function API.navigateToPoint(x, y, z, order, persist)
             
             if not refresh_data() then return false, "gps" end
 
-            if _current_direction == "north" and not sz < cz then return false, "compass" end
-            if _current_direction == "south" and not sz > cz then return false, "compass" end
-            if _current_direction == "east" and not sx > cx then return false, "compass" end
-            if _current_direction == "west" and not sx < cx then return false, "compass" end
+            local dirstr = CARDINAL_DIRECTIONS[_current_direction]
+            if dirstr == "north" and not (sz < cz) then return false, "compass" end
+            if dirstr == "south" and not (sz > cz) then return false, "compass" end
+            if dirstr == "east" and not (sx > cx) then return false, "compass" end
+            if dirstr == "west" and not (sx < cx) then return false, "compass" end
 
-            print("Correctly calibrated!")
+            -- print("Correctly calibrated!")
             calibrated = true
             count = count - 1
         end
@@ -538,6 +553,10 @@ function API.navigateToPoint(x, y, z, order, persist)
         API.loop(function()
             return API[action]() == 1
         end, nil, count)
+
+        if cx ~= nil then
+            if not refresh_data() then return false, "gps" end
+        end
 
         return true
     end
@@ -547,7 +566,7 @@ function API.navigateToPoint(x, y, z, order, persist)
         local action = "forward"
         local count
 
-        print("Resolving axis", axis)
+        -- print("Resolving axis", axis)
 
         if distance == 0 then return true end
 
@@ -566,6 +585,8 @@ function API.navigateToPoint(x, y, z, order, persist)
             if distance > 0 then API.setDirection("south") end
             count = math.abs(distance)
         end
+
+        -- print("Travelling for", count, "steps")
 
         local res, err = travel(action, count)
         
@@ -592,8 +613,9 @@ function API.navigateToPoint(x, y, z, order, persist)
     end
 
     while dist[1][2] ~= 0 or dist[2][2] ~= 0 or dist[3][2] ~= 0 do
-        print("Sorting axes!")
-        table.sort(dist, function(a,b) return a[2] > b[2] end)
+        -- print("Sorting axes!")
+        table.sort(dist, function(a,b) return math.abs(a[2]) > math.abs(b[2]) end)
+        
         if not refresh_data() then return end
 
         repeat
