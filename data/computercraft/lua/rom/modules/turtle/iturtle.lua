@@ -18,7 +18,9 @@ local OPPOSITE_DIRECTIONS = {
 
 local _swap_stack = {}
 local _timeout_stack = {}
+
 local _current_direction
+local _known_locations = {}
 
 local function new_swap_tracker(bool)
     table.insert(_swap_stack, bool or false)
@@ -57,6 +59,7 @@ local function save_data()
     local data = textutils.serialize({
         version = VERSION,
         direction = _current_direction
+        locations = _known_locations
     })
     local file = fs.open(DATA_FILE, "w")
     file.write(data)
@@ -459,6 +462,49 @@ function API.setDirection(direction)
     return API.getDirection() == direction
 end
 
+function API.registerLocation(label, x, y, z)
+    if not x then
+        x, y, z = gps.locate()
+        if not x then
+            printError("No valid gps data found.")
+            printError("Cannot implicitly set location.")
+        end
+    else
+        x = tonumber(x)
+        y = tonumber(y)
+        z = tonumber(z)
+
+        if not x or not y or not z then
+            error("Invalid coordinates given.", 2)
+        end
+    end
+
+    _known_locations[label] = {x, y, z}
+    save_data()
+    
+    print("Registered location.")
+    print(label.." : ("..x..", "..y..", "..z..")")
+end
+
+function API.unregisterLocation(label)
+    if _known_locations[label] then
+        _known_locations[label] = nil
+        save_data()
+        print("Location deleted: ", label)
+        return
+    end
+
+    printError("No location data found.")
+end
+
+function API.getLocation(label)
+    if _known_locations[label] then
+        return table.unpack(_known_locations[label])
+    end
+
+    printError("No location data found.")
+end
+
 function API.navigateLocal(x, y, z, order)
     local dist = {
         {"x", x},
@@ -716,12 +762,22 @@ function API.navigateToPoint(x, y, z, order)
     return true
 end
 
+function API.navigateToLocation(label, order)
+    if _known_locations[label] then
+        local x, y, z = API.getLocation(label)
+        return API.navigateToPoint(x, y, z, order)
+    end
+
+    printError("No location data found.")
+end
+
 
 if fs.exists(DATA_FILE) then
     local file = fs.open(DATA_FILE, "r")
     local data = textutils.unserialize(file.readAll())
     file.close()
     _current_direction = data.direction
+    _known_locations = data.locations
 end
 
 return API
