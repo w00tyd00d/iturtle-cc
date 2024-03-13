@@ -6,9 +6,7 @@
 
 local VERSION = "1.1"
 local DATA_FILE = "/.iturtle.dat"
-local ARGS = {...}
 local API = {}
-
 
 local CARDINAL_DIRECTIONS = {"north", "east", "south", "west"}
 local OPPOSITE_DIRECTIONS = {
@@ -89,6 +87,93 @@ setmetatable(API, {
         end
     end
 })
+
+-- Wrapper Methods
+
+local function _turn_direction(num)
+    if _current_direction then
+        _current_direction = ((_current_direction - 1 + num) % 4) + 1
+        save_data()
+    end
+end
+
+local function _move(count, action)
+    count = guard_clause(count)
+    if not count then return end
+
+    local faults = 0
+
+    for i=1,count do
+        if action == "turnLeft" then _turn_direction(-1) end
+        if action == "turnRight" then _turn_direction(1) end
+
+        if not turtle[action]() then
+            faults = faults + 1
+            if action == "turnLeft" then _turn_direction(1) end
+            if action == "turnRight" then _turn_direction(-1) end
+        end
+    end
+
+    return faults, count
+end
+
+local function _attack(side, count, direction)
+    count = guard_clause(count)
+    if not count then return end
+
+    local faults = 0
+
+    for i=1,count do
+        if not turtle[direction](side) then
+            faults = faults + 1
+        end
+    end
+
+    return faults, count
+end
+
+local function _dig(side, count, end_step, direction)
+    count = guard_clause(count)
+    if not count then return end
+
+    local tbl = {
+        forward = turtle.dig,
+        up = turtle.digUp,
+        down = turtle.digDown
+    }
+
+    local subcount = 0
+    local faults   = 0
+
+    for i=1,count do
+        if not tbl[direction](side) then
+            faults = faults + 1
+        end
+        if i < count or i == count and end_step then
+            local res = API[direction]()
+            subcount = subcount + 1
+            faults = faults + res
+        end
+    end
+
+    return faults, count + subcount
+end
+
+function API.forward(count) return _move(count, "forward") end
+function API.back(count) return _move(count, "back") end
+function API.up(count) return _move(count, "up") end
+function API.down(count) return _move(count, "down") end
+function API.turnLeft(count) return _move(count, get_is_swapped() and "turnRight" or "turnLeft") end
+function API.turnRight(count) return _move(count, get_is_swapped() and "turnLeft" or "turnRight") end
+
+function API.attack(side, count) return _attack(side, count, "attack") end
+function API.attackUp(side, count) return _attack(side, count, "attackUp") end
+function API.attackDown(side, count) return _attack(side, count, "attackDown") end
+
+function API.dig(side, count, end_step) return _dig(side, count, end_step, "forward") end
+function API.digUp(side, count, end_step) return _dig(side, count, end_step, "up") end
+function API.digDown(side, count, end_step) return _dig(side, count, end_step, "down") end
+
 
 -- New Methods
 
@@ -631,92 +716,6 @@ function API.navigateToPoint(x, y, z, order)
     return true
 end
 
--- Wrapper Methods
-
-local function _turn_direction(num)
-    if _current_direction then
-        _current_direction = ((_current_direction - 1 + num) % 4) + 1
-        save_data()
-    end
-end
-
-local function _move(count, action)
-    count = guard_clause(count)
-    if not count then return end
-
-    local faults = 0
-
-    for i=1,count do
-        if action == "turnLeft" then _turn_direction(-1) end
-        if action == "turnRight" then _turn_direction(1) end
-
-        if not turtle[action]() then
-            faults = faults + 1
-            if action == "turnLeft" then _turn_direction(1) end
-            if action == "turnRight" then _turn_direction(-1) end
-        end
-    end
-
-    return faults, count
-end
-
-local function _attack(side, count, direction)
-    count = guard_clause(count)
-    if not count then return end
-
-    local faults = 0
-
-    for i=1,count do
-        if not turtle[direction](side) then
-            faults = faults + 1
-        end
-    end
-
-    return faults, count
-end
-
-local function _dig(side, count, end_step, direction)
-    count = guard_clause(count)
-    if not count then return end
-
-    local tbl = {
-        forward = turtle.dig,
-        up = turtle.digUp,
-        down = turtle.digDown
-    }
-
-    local subcount = 0
-    local faults   = 0
-
-    for i=1,count do
-        if not tbl[direction](side) then
-            faults = faults + 1
-        end
-        if i < count or i == count and end_step then
-            local res = API[direction]()
-            subcount = subcount + 1
-            faults = faults + res
-        end
-    end
-
-    return faults, count + subcount
-end
-
-function API.forward(count) return _move(count, "forward") end
-function API.back(count) return _move(count, "back") end
-function API.up(count) return _move(count, "up") end
-function API.down(count) return _move(count, "down") end
-function API.turnLeft(count) return _move(count, get_is_swapped() and "turnRight" or "turnLeft") end
-function API.turnRight(count) return _move(count, get_is_swapped() and "turnLeft" or "turnRight") end
-
-function API.attack(side, count) return _attack(side, count, "attack") end
-function API.attackUp(side, count) return _attack(side, count, "attackUp") end
-function API.attackDown(side, count) return _attack(side, count, "attackDown") end
-
-function API.dig(side, count, end_step) return _dig(side, count, end_step, "forward") end
-function API.digUp(side, count, end_step) return _dig(side, count, end_step, "up") end
-function API.digDown(side, count, end_step) return _dig(side, count, end_step, "down") end
-
 
 if fs.exists(DATA_FILE) then
     local file = fs.open(DATA_FILE, "r")
@@ -724,6 +723,5 @@ if fs.exists(DATA_FILE) then
     file.close()
     _current_direction = data.direction
 end
-
 
 return API
