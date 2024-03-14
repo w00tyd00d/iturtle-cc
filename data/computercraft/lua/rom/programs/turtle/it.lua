@@ -45,6 +45,7 @@ if #ARGS == 0 then
     print("it compass <direction>")
     print("it face <direction>")
     print("it go <direction> <distance>")
+    print("it location <get|set|delete> <location>")
     print("it navigate <local|global> <x> <y> <z>")
     print("it navigate <to> <location>")
     return
@@ -67,9 +68,13 @@ if #ARGS == 1 then
         print("Must be north, south, east, or west.")
         compass_repsonse()
 
+    elseif ARGS[1] == "location" then
+        print("Access saved location database.")
+        print("Used for coordinate bookmarking.")
+
     elseif ARGS[1] == "navigate" then
         print("Moves the turtle to a specific point.\n")
-        print("Can be global coordinates (gps required) or can be local coordinates based on the turtle's rotation.")
+        print("Can be local position (same as /tp ^x ^y ^z) or if GPS is available, also supports global coordinates and saved locations.")
 
     elseif ARGS[1] == "go" then
         print("Same as normal 'go' program.")
@@ -105,6 +110,9 @@ if #ARGS == 2 then
 
         elseif ARGS[2] == "set" then
             print("Record coordinates of a location.")
+
+        elseif ARGS[2] == "delete" then
+            print("Delete a location from memory.")
 
         end
 
@@ -152,6 +160,20 @@ elseif ARGS[1] == "location" then
 
     elseif ARGS[2] == "get" then
         local label = ARGS[3]
+        
+        if label == "*" then
+            local res = ""
+
+            for k,v in pairs(API.getAllLocations()) do
+                local x, y, z = table.unpack(v)
+                res = res..k.." : ("..x..", "..y..", "..z..")\n"
+            end
+
+            local _, height = term.getCursorPos()
+            textutils.pagedPrint(res:sub(1,-2), height - 2)
+            return
+        end
+
         local x, y, z = API.getLocation(label)
 
         if not x then
@@ -159,10 +181,12 @@ elseif ARGS[1] == "location" then
             return
         end
 
-        -- ADD SUPPORT FOR WILDCARD CHAR : *
-        -- WILL RETURN ALL RESULTS
-
         print(label.." : ("..x..", "..y..", "..z..")")
+
+    elseif ARGS[2] == "delete" then
+        local label = ARGS[3]
+        API.unregisterLocation(label)
+
     end
     
 

@@ -494,7 +494,7 @@ function API.unregisterLocation(label)
     if _known_locations[label] then
         _known_locations[label] = nil
         save_data()
-        print("Location deleted: ", label)
+        print("Location deleted:", label)
         return
     end
 
@@ -507,6 +507,10 @@ function API.getLocation(label)
     end
 
     printError("No location data found.")
+end
+
+function API.getAllLocations()
+    return _known_locations
 end
 
 function API.navigateLocal(x, y, z, order)
