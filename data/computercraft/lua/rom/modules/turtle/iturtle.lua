@@ -91,6 +91,7 @@ setmetatable(API, {
     end
 })
 
+
 -- Wrapper Methods
 
 local function _turn_direction(num)
@@ -467,6 +468,8 @@ function API.setDirection(direction)
 end
 
 function API.registerLocation(label, x, y, z)
+    if not guard_clause() then return end
+
     if not x then
         x, y, z = gps.locate()
         if not x then
@@ -491,17 +494,21 @@ function API.registerLocation(label, x, y, z)
 end
 
 function API.unregisterLocation(label)
-    if _known_locations[label] then
-        _known_locations[label] = nil
-        save_data()
-        print("Location deleted:", label)
+    if not guard_clause() then return end
+
+    if not _known_locations[label] then
+        printError("No location data found.")
         return
     end
 
-    printError("No location data found.")
+    _known_locations[label] = nil
+    save_data()
+    print("Location deleted:", label)
 end
 
 function API.getLocation(label)
+    if not guard_clause() then return end
+
     if not _known_locations[label] then
         printError("No location data found.")
         return
@@ -511,10 +518,14 @@ function API.getLocation(label)
 end
 
 function API.getAllLocations()
+    if not guard_clause() then return end
+
     return _known_locations
 end
 
 function API.navigateLocal(x, y, z, order)
+    if not guard_clause() then return end
+
     local dist = {
         {"x", x or 0},
         {"y", y or 0},
@@ -569,7 +580,6 @@ function API.navigateLocal(x, y, z, order)
     end
 
     while dist[1][2] ~= 0 or dist[2][2] ~= 0 or dist[3][2] ~= 0 do
-        -- print("Finding smallest axis!")
         table.sort(dist, function(a,b) return math.abs(a[2]) > math.abs(b[2]) end)
         local cache = {}
 
@@ -658,7 +668,6 @@ function API.navigateToPoint(x, y, z, order)
     local dist = {}
 
     local function refresh_data()
-        -- print("Refreshing data!")
         sx, sy, sz = gps.locate()
         
         if not sx then
@@ -669,8 +678,6 @@ function API.navigateToPoint(x, y, z, order)
         dist[1] = {"x", x - sx}
         dist[2] = {"y", y - sy}
         dist[3] = {"z", z - sz}
-        
-        -- print(textutils.serialize(dist))
         
         return true
     end
@@ -693,7 +700,6 @@ function API.navigateToPoint(x, y, z, order)
             if dirstr == "east" and not (sx > cx) then return false, "compass" end
             if dirstr == "west" and not (sx < cx) then return false, "compass" end
 
-            -- print("Correctly calibrated!")
             calibrated = true
             count = count - 1
         end
@@ -714,8 +720,6 @@ function API.navigateToPoint(x, y, z, order)
         local action = "forward"
         local count
 
-        -- print("Resolving axis", axis)
-
         if distance == 0 then return true end
 
         if axis == "x" then
@@ -733,8 +737,6 @@ function API.navigateToPoint(x, y, z, order)
             if distance > 0 then API.setDirection("south") end
             count = math.abs(distance)
         end
-
-        -- print("Travelling for", count, "steps")
 
         local res, err = travel(action, count)
         
@@ -772,7 +774,6 @@ function API.navigateToPoint(x, y, z, order)
         if not refresh_data() then return end
 
         repeat
-            -- print("Sorting axes!")
             table.sort(dist, function(a,b) return math.abs(a[2]) > math.abs(b[2]) end)
             local choice = table.remove(dist)
 
@@ -789,6 +790,8 @@ function API.navigateToPoint(x, y, z, order)
 end
 
 function API.navigateToLocation(label, order)
+    if not guard_clause() then return end
+
     if not _known_locations[label] then
         printError("No location data found.")
         return

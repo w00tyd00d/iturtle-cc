@@ -178,7 +178,6 @@ elseif ARGS[1] == "location" then
         API.unregisterLocation(label)
 
     end
-    
 
 elseif ARGS[1] == "navigate" then
     
@@ -337,7 +336,7 @@ elseif ARGS[1] == "go" then
     local function do_cached_action()
         if cached_action then
             if cached_action() == 1 and API.getFuelLevel() == 0 then
-                print("Out of fuel")
+                print("Out of fuel.")
                 return false
             end
         end
@@ -358,7 +357,9 @@ elseif ARGS[1] == "go" then
         local arg = ARGS[i]
         
         if ACTIONS[arg] then
-            do_cached_action()
+            if not do_cached_action() then
+                return
+            end
             cached_action = ACTIONS[arg]
         
         elseif tonumber(arg) ~= nil and cached_action then
