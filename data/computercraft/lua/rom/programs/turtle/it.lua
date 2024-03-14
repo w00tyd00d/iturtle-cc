@@ -333,6 +333,16 @@ elseif ARGS[1] == "go" then
     }
 
     local cached_action
+    
+    local function do_cached_action()
+        if cached_action then
+            if cached_action() == 1 and API.getFuelLevel() == 0 then
+                print("Out of fuel")
+                return false
+            end
+        end
+        return true
+    end
 
     for i=2, #ARGS do
         local arg = ARGS[i]
@@ -348,20 +358,14 @@ elseif ARGS[1] == "go" then
         local arg = ARGS[i]
         
         if ACTIONS[arg] then
-            if cached_action then 
-                cached_action()
-            end
+            do_cached_action()
             cached_action = ACTIONS[arg]
+        
         elseif tonumber(arg) ~= nil and cached_action then
             local _, res = API.loop(function()
-                if API.getFuelLevel() == 0 then
-                    return "Out of fuel"
-                end
-                cached_action()
+                return not do_cached_action()
             end, nil, tonumber(arg))
 
-            if res then print(res) return end
-            
             cached_action = nil
         else
             print("No such direction:", arg)
@@ -370,5 +374,5 @@ elseif ARGS[1] == "go" then
 
     end
 
-    if cached_action then cached_action() end
+    do_cached_action()
 end
