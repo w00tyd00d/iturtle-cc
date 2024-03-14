@@ -19,6 +19,10 @@ local MOVE_ACTIONS  = {
 
 local ARGS = {...}
 
+local function version_respons()
+    print("ITurtle Library Version "..API.getVersion())
+end
+
 local function compass_repsonse()
     local direction = API.getDirection()
 
@@ -30,13 +34,25 @@ local function compass_repsonse()
     print("Current facing direction is:", direction)
 end
 
+local function order_response()
+    print("Initial order must be string of axes.")
+    print("Eg: xyz, yx, zxy, y")
+end
 
 if #ARGS == 0 then
     print("Usages:")
+    print("it version")
     print("it compass <direction>")
     print("it face <direction>")
     print("it go <direction> <distance>")
-    print("it navigate <local|to> <x> <y> <z>")
+    print("it navigate <local|global> <x> <y> <z>")
+    print("it navigate <to> <location>")
+    return
+end
+
+-- Doesn't matter how many more args it has
+if ARGS[1] == "version" then
+    print("ITurtle Library Version "..API.getVersion())
     return
 end
 
@@ -57,7 +73,7 @@ if #ARGS == 1 then
 
     elseif ARGS[1] == "go" then
         print("Same as normal 'go' program.")
-        prin("Uses ITurtle API for compass tracking.")
+        print("Uses ITurtle API for compass tracking.")
     end
 
     return
@@ -66,14 +82,33 @@ end
 if #ARGS == 2 then
     if ARGS[1] == "navigate" then
         if ARGS[2] == "local" then
-            print("Moves the turtle locally.")
+            print("Move the turtle based on rotation.")
             print("Equivalent to using: /tp ^x ^y ^z")
 
-        elseif ARGS[2] == "to" or ARGS[2] == "global" then
-            print("Moves the turtle to a coordinate.")
+        elseif ARGS[2] == "global" then
+            print("Move the turtle to a coordinate.")
             print("Equivalent to using: /tp x y z")
             print("Requires functioning gps in range.")
+
+        elseif ARGS[2] == "to" then
+            print("Move the turtle to a known location.")
+            print("Requires location to be registered.")
+
         end
+       
+        return
+
+    elseif ARGS[1] == "location" then
+        if ARGS[2] == "get" then
+            print("Get coordinates of a known location.")
+            print("Requires location to be registered.")
+
+        elseif ARGS[2] == "set" then
+            print("Record coordinates of a location.")
+
+        end
+
+        return
     end
 end
 
@@ -93,7 +128,46 @@ elseif ARGS[1] == "face" then
     end
     API.setDirection(ARGS[2])
 
+elseif ARGS[1] == "location" then
+
+    if ARGS[2] == "set" then
+        local label = ARGS[3]
+        local x, y, z
+
+        if ARGS[4] then
+            x = tonumber(ARGS[4])
+            y = tonumber(ARGS[5])
+            z = tonumber(ARGS[6])
+
+            if not x or not y or not z then
+                print("Must use valid coordinates.")
+                return
+            end
+
+            API.registerLocation(label, x, y, z)
+            return
+        end
+
+        API.registerLocation(label)    
+
+    elseif ARGS[2] == "get" then
+        local label = ARGS[3]
+        local x, y, z = API.getLocation(label)
+
+        if not x then
+            print("Must be a registered location.")
+            return
+        end
+
+        -- ADD SUPPORT FOR WILDCARD CHAR : *
+        -- WILL RETURN ALL RESULTS
+
+        print(label.." : ("..x..", "..y..", "..z..")")
+    end
+    
+
 elseif ARGS[1] == "navigate" then
+    
     if ARGS[2] == "local" then
         local x = tonumber(ARGS[3])
         local y = ARGS[4] == nil and 0 or tonumber(ARGS[4])
@@ -104,9 +178,29 @@ elseif ARGS[1] == "navigate" then
             return
         end
 
-        API.navigateLocal(x, y, z)
+        local order = ARGS[6]
 
-    elseif ARGS[2] == "to" or ARGS[2] == "global" then
+        if order then
+            if #order > 3 then
+                order_response()
+                return
+            end
+
+            local valid = {x = true, y = true, z = true}
+            local seen  = {}
+
+            for char in order:gmatch(".") do
+                if not valid[char] or seen[char] then
+                    order_response()
+                    return
+                end
+                seen[char] = true
+            end
+        end
+
+        API.navigateLocal(x, y, z, order)
+
+    elseif ARGS[2] == "global" then
         local x = tonumber(ARGS[3])
         local y = ARGS[4] == nil and 0 or tonumber(ARGS[4])
         local z = ARGS[5] == nil and 0 or tonumber(ARGS[5])
@@ -123,7 +217,50 @@ elseif ARGS[1] == "navigate" then
             return
         end
 
-        API.navigateToPoint(x, y, z)
+        local order = ARGS[6]
+
+        if order then
+            if #order > 3 then
+                order_response()
+                return
+            end
+
+            local valid = {x = true, y = true, z = true}
+            local seen  = {}
+
+            for char in order:gmatch(".") do
+                if not valid[char] or seen[char] then
+                    order_response()
+                    return
+                end
+                seen[char] = true
+            end
+        end
+
+        API.navigateToPoint(x, y, z, order)
+
+    elseif ARGS[2] == "to" then
+        local order = ARGS[4]
+
+        if order then
+            if #order > 3 then
+                order_response()
+                return
+            end
+
+            local valid = {x = true, y = true, z = true}
+            local seen  = {}
+
+            for char in order:gmatch(".") do
+                if not valid[char] or seen[char] then
+                    order_response()
+                    return
+                end
+                seen[char] = true
+            end
+        end
+
+        API.navigateToLocation(ARGS[3], order)
     end
 
 elseif ARGS[1] == "go" then

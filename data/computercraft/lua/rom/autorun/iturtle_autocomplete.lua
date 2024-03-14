@@ -1,8 +1,5 @@
 local completion = require("cc.shell.completion")
 
-local CARDINALS     = {"north", "east", "south", "west"}
-local MOVE_ACTIONS  = {"left", "right", "forward", "back", "down", "up"}
-
 local function get_locations()
     local data
     if fs.exists("/.iturtle.dat") then
@@ -11,25 +8,34 @@ local function get_locations()
         file.close()
     end
 
-    if not data then return {} end
+    if not data or not data.locations then return {} end
 
     local res = {}
-    for k,v in pairs(data.directions) do
+    for k,v in pairs(data.locations) do
         table.insert(res, k)
     end
 
     return res
 end
 
+local BASE_SUB      = {"compass", "face", "go", "location", "navigate", "version"}
+local NAVIGATE_SUB  = {"local", "to", "global"}
+local CARDINALS     = {"north", "east", "south", "west"}
+local MOVE_ACTIONS  = {"left", "right", "forward", "back", "down", "up"}
+local GET_SET       = {"get", "set", "delete"}
+
 local iturtle_tree =
--- tree_node    = {loops, {subcommands}, add_space}
+-- tree_node    = {{choice_list}, additional_tags}
 {
-    it          = {nil, {"compass", "face", "navigate", "go"}, true},
-    compass     = {nil, CARDINALS, false},
-    face        = {nil, CARDINALS, false},
-    navigate    = {nil, {"local", "to", "global"}, true},
-    to          = {nil, get_locations, false}
-    go          = {true, MOVE_ACTIONS, true}
+    it          = {BASE_SUB, add_space = true},
+    compass     = {CARDINALS},
+    face        = {CARDINALS},
+    location    = {GET_SET, add_space = true},
+    get         = {get_locations},
+    delete      = {get_locations},
+    navigate    = {NAVIGATE_SUB, add_space = true},
+    to          = {get_locations},
+    go          = {MOVE_ACTIONS, add_space = true, loop = true},
 }
 
 local function choice_impl(text, choices, add_space)
@@ -51,18 +57,21 @@ end
 local function choice_tree(shell, text, previous, tree)
     local prev = previous[#previous]
     local subcmd = previous[2]
+    local branch
 
-    if subcmd and tree[subcmd] and tree[subcmd][1] == true then
-        local choices, add_space = table.unpack(tree[subcmd], 2)
+    if subcmd and tree[subcmd] and tree[subcmd].loop then
+        branch = tree[subcmd]
     elseif tree[prev] then
-        local choices, add_space = table.unpack(tree[prev], 2)
+        branch = tree[prev]
     end
+
+    local choices = branch and branch[1] or {}
 
     if type(choices) == "function" then
         choices = choices()
     end
-    
-    return choices and choice_impl(text, choices, add_space) or {}
+
+    return choice_impl(text, choices, branch and branch.add_space or false)
 end
 
 shell.setCompletionFunction("rom/programs/turtle/it.lua", completion.build(

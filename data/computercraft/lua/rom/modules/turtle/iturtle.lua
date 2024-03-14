@@ -58,9 +58,9 @@ end
 local function save_data()
     local data = textutils.serialize({
         version = VERSION,
-        direction = _current_direction
+        direction = _current_direction,
         locations = _known_locations
-    })
+    }, {compact = true})
     local file = fs.open(DATA_FILE, "w")
     file.write(data)
     file.close()
@@ -179,6 +179,10 @@ function API.digDown(side, count, end_step) return _dig(side, count, end_step, "
 
 
 -- New Methods
+
+function API.getVersion()
+    return VERSION
+end
 
 local function _loop(fn, stagingFn, count, swap)
     count = guard_clause(count or math.huge)
@@ -546,7 +550,7 @@ function API.navigateLocal(x, y, z, order)
 
     if order then
         for i=1, math.min(3, #order) do
-            local axis = order[i]
+            local axis = order:sub(i,i)
             resolve_axis(axis)
         end
     end
@@ -723,7 +727,7 @@ function API.navigateToPoint(x, y, z, order)
         
         if not res then
             if err == "compass" then
-                printError("Compass not calibrated properly! Ending navigation.")
+                printError("Compass not calibrated properly!\nEnding navigation.")
             end
             return
         end
@@ -736,7 +740,7 @@ function API.navigateToPoint(x, y, z, order)
     if order then
         for i=1, math.min(3, #order) do
             local key = {x=1, y=2, z=3}
-            local axis = order[i]
+            local axis = order:sub(i,i)
             if not resolve_axis(dist[key[axis]]) then
                 return false
             end
@@ -744,17 +748,18 @@ function API.navigateToPoint(x, y, z, order)
     end
 
     while dist[1][2] ~= 0 or dist[2][2] ~= 0 or dist[3][2] ~= 0 do
-        -- print("Sorting axes!")
-        table.sort(dist, function(a,b) return math.abs(a[2]) > math.abs(b[2]) end)
-        
         if not refresh_data() then return end
 
         repeat
+            -- print("Sorting axes!")
+            table.sort(dist, function(a,b) return math.abs(a[2]) > math.abs(b[2]) end)
             local choice = table.remove(dist)
+
             if not resolve_axis(choice) then
                 return false
             end
-        until dist[1] == nil
+        until
+            dist[1] == nil
 
         if not refresh_data() then return end
     end
@@ -777,7 +782,7 @@ if fs.exists(DATA_FILE) then
     local data = textutils.unserialize(file.readAll())
     file.close()
     _current_direction = data.direction
-    _known_locations = data.locations
+    _known_locations = data.locations or {}
 end
 
 return API
