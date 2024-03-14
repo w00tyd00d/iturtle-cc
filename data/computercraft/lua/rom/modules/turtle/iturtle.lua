@@ -502,11 +502,12 @@ function API.unregisterLocation(label)
 end
 
 function API.getLocation(label)
-    if _known_locations[label] then
-        return table.unpack(_known_locations[label])
+    if not _known_locations[label] then
+        printError("No location data found.")
+        return
     end
 
-    printError("No location data found.")
+    return table.unpack(_known_locations[label])
 end
 
 function API.getAllLocations()
@@ -515,11 +516,19 @@ end
 
 function API.navigateLocal(x, y, z, order)
     local dist = {
-        {"x", x},
-        {"y", y},
-        {"z", z}
+        {"x", x or 0},
+        {"y", y or 0},
+        {"z", z or 0}
     }
 
+    local fuel = tonumber(API.getFuelLevel())
+    local distance = math.abs(dist[1][2]) + math.abs(dist[2][2]) + math.abs(dist[3][2])
+
+    if fuel and fuel < distance then
+        printError("Not enough fuel, navigation cancelled.")
+        return
+    end
+    
     local function resolve_axis(data)
         local axis, distance = table.unpack(data)
 
@@ -741,6 +750,14 @@ function API.navigateToPoint(x, y, z, order)
 
     if not refresh_data() then return end
 
+    local fuel = tonumber(API.getFuelLevel())
+    local distance = math.abs(dist[1][2]) + math.abs(dist[2][2]) + math.abs(dist[3][2])
+
+    if fuel and fuel < distance then
+        printError("Not enough fuel, navigation cancelled.")
+        return
+    end
+
     if order then
         for i=1, math.min(3, #order) do
             local key = {x=1, y=2, z=3}
@@ -772,12 +789,13 @@ function API.navigateToPoint(x, y, z, order)
 end
 
 function API.navigateToLocation(label, order)
-    if _known_locations[label] then
-        local x, y, z = API.getLocation(label)
-        return API.navigateToPoint(x, y, z, order)
+    if not _known_locations[label] then
+        printError("No location data found.")
+        return
     end
 
-    printError("No location data found.")
+    local x, y, z = API.getLocation(label)
+    return API.navigateToPoint(x, y, z, order)
 end
 
 

@@ -1,22 +1,5 @@
 local API = require("iturtle")
 
-local DIRECTIONS = {
-    north   = true,
-    east    = true,
-    south   = true,
-    west    = true
-}
-
-local MOVE_ACTIONS  = {
-    left    = true,
-    right   = true,
-    forward = true,
-    back    = true,
-    down    = true,
-    up      = true
-}
-
-
 local ARGS = {...}
 
 local function version_respons()
@@ -93,7 +76,7 @@ if #ARGS == 2 then
         elseif ARGS[2] == "global" then
             print("Move the turtle to a coordinate.")
             print("Equivalent to using: /tp x y z")
-            print("Requires functioning gps in range.")
+            print("Requires functioning GPS in range.")
 
         elseif ARGS[2] == "to" then
             print("Move the turtle to a known location.")
@@ -121,6 +104,13 @@ if #ARGS == 2 then
 end
 
 -- #ARGS > 2
+
+local DIRECTIONS = {
+    north   = true,
+    east    = true,
+    south   = true,
+    west    = true
+}
 
 if ARGS[1] == "compass" then
     if not DIRECTIONS[ARGS[2]] then
@@ -202,6 +192,16 @@ elseif ARGS[1] == "navigate" then
             return
         end
 
+        local fuel = tonumber(API.getFuelLevel())
+        local distance = math.abs(x) + math.abs(y) + math.abs(z)
+
+        if fuel and fuel < distance then
+            print("Not enough fuel.")
+            print("Fuel level  :", fuel)
+            print("Fuel needed :", distance)
+            return
+        end
+
         local order = ARGS[6]
 
         if order then
@@ -237,7 +237,17 @@ elseif ARGS[1] == "navigate" then
         local sx, sy, sz = gps.locate()
 
         if not sx then
-            print("No valid gps data found.")
+            print("No valid GPS data found.")
+            return
+        end
+
+        local fuel = tonumber(API.getFuelLevel())
+        local distance = math.abs(x - sx) + math.abs(y - sy) + math.abs(z - sz)
+
+        if fuel and fuel < distance then
+            print("Not enough fuel.")
+            print("Fuel level  :", fuel)
+            print("Fuel needed :", distance)
             return
         end
 
@@ -266,6 +276,25 @@ elseif ARGS[1] == "navigate" then
     elseif ARGS[2] == "to" then
         local order = ARGS[4]
 
+        local dx, dy, dz = API.getLocation(ARGS[3])
+        if not dx then return end
+
+        local sx, sy, sz = gps.locate()
+        if not sx then
+            print("No valid GPS data found.")
+            return
+        end
+
+        local fuel = tonumber(API.getFuelLevel())
+        local distance = math.abs(dx - sx) + math.abs(dy - sy) + math.abs(dz - sz)
+
+        if fuel and fuel < distance then
+            print("Not enough fuel.")
+            print("Fuel level  :", fuel)
+            print("Fuel needed :", distance)
+            return
+        end
+
         if order then
             if #order > 3 then
                 order_response()
@@ -288,13 +317,28 @@ elseif ARGS[1] == "navigate" then
     end
 
 elseif ARGS[1] == "go" then
-    local action
+    local ACTIONS = {
+        fd       = API.forward,
+        forward  = API.forward,
+        forwards = API.forward,
+        bk       = API.back,
+        back     = API.back,
+        up       = API.up,
+        dn       = API.down,
+        down     = API.down,
+        lt       = API.turnLeft,
+        left     = API.turnLeft,
+        rt       = API.turnRight,
+        right    = API.turnRight,
+    }
+
+    local cached_action
 
     for i=2, #ARGS do
         local arg = ARGS[i]
         local num = tonumber(arg)
 
-        if not MOVE_ACTIONS[arg] and ((not num) or (num and num < 0)) then
+        if not ACTIONS[arg] and ((not num) or (num and num < 0)) then
             print("Must use valid directions or numbers.")
             return
         end
@@ -303,27 +347,22 @@ elseif ARGS[1] == "go" then
     for i=2, #ARGS do
         local arg = ARGS[i]
         
-        if MOVE_ACTIONS[arg] then
-            arg = arg == "left" and "turnLeft" or arg
-            arg = arg == "right" and "turnRight" or arg
-            if action then 
-                API[action]() 
+        if ACTIONS[arg] then
+            if cached_action then 
+                cached_action()
             end
-            action = arg
-        elseif tonumber(arg) ~= nil and action then
+            cached_action = ACTIONS[arg]
+        elseif tonumber(arg) ~= nil and cached_action then
             local _, res = API.loop(function()
                 if API.getFuelLevel() == 0 then
                     return "Out of fuel"
                 end
-                API[action]()
+                cached_action()
             end, nil, tonumber(arg))
 
-            if res then
-                print(res)
-                return
-            end
+            if res then print(res) return end
             
-            action = nil
+            cached_action = nil
         else
             print("No such direction:", arg)
             print("Try: forward, back, up, down")
@@ -331,5 +370,5 @@ elseif ARGS[1] == "go" then
 
     end
 
-    if action then API[action]() end
+    if cached_action then cached_action() end
 end
