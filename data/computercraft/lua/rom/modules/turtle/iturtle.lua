@@ -589,8 +589,6 @@ function API.navigateLocal(x, y, z, order)
 
         dist = cache
     end
-
-    return true
 end
 
 function API.navigatePath(end_block, path_block, vert_block)
@@ -795,8 +793,6 @@ function API.navigateToPoint(x, y, z, order)
 
         if not refresh_data() then return end
     end
-
-    return true
 end
 
 function API.navigateToLocation(label, order)
@@ -808,7 +804,7 @@ function API.navigateToLocation(label, order)
     end
 
     local x, y, z = API.getLocation(label)
-    return API.navigateToPoint(x, y, z, order)
+    API.navigateToPoint(x, y, z, order)
 end
 
 
