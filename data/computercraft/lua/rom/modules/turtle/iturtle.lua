@@ -608,6 +608,11 @@ function API.navigatePath(end_block, path_block, vert_block)
     local block_data = API.blockDataDown
 
     API.loop(function()
+        if API.getFuelLevel() == 0 then
+            printError("Out of fuel.\nEnding navigation.")
+            return true
+        end
+
         local block = block_data()
         
         local function query_next_direction()
@@ -635,7 +640,7 @@ function API.navigatePath(end_block, path_block, vert_block)
                 if block.name == end_block  then
                     return true
                 end
-                
+
                 query_next_direction()
             end
         else
