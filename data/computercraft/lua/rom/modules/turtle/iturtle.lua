@@ -813,7 +813,7 @@ function API.navigateToLocation(label, order)
 
     if not _known_locations[label] then
         printError("No location data found.")
-        return
+        return false, "label"
     end
 
     local x, y, z = API.getLocation(label)
