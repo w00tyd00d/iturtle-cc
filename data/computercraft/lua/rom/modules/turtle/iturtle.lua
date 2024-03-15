@@ -812,8 +812,7 @@ function API.navigateToLocation(label, order)
     if not guard_clause() then return end
 
     if not _known_locations[label] then
-        printError("No location data found.")
-        return false, "label"
+        error("Invalid location label given.", 2)
     end
 
     local x, y, z = API.getLocation(label)
