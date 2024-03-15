@@ -390,9 +390,7 @@ function API.unregisterDirection()
 
     _current_direction = nil
     
-    if fs.exists(DATA_FILE) then
-        fs.delete(DATA_FILE)
-    end
+    save_data()
 end
 
 function API.registerDirection(direction)
