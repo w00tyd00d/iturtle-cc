@@ -623,10 +623,16 @@ function API.navigatePath(end_block, path_block, vert_block)
             end
 
             if block.state and block.state.facing ~= nil then
+                -- Using as a LUT
+                if not OPPOSITE_DIRECTIONS[block.state.facing] then
+                    return
+                end
+
                 local cardinal = block.state.facing
                 if block.name == "minecraft:magenta_glazed_terracotta" then
                     cardinal = OPPOSITE_DIRECTIONS[block.state.facing]
                 end
+                
                 API.setDirection(cardinal)
             end
             
