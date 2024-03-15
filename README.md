@@ -36,12 +36,22 @@ Check out the API [documentation](https://github.com/w00tyd00d/iturtle-cc/wiki) 
 
 <br>    
 
+### Shell interface
+
+New in version 1.1, ITurtle now provides a shell interface to allow for quick modifications on the fly.
+
+If using the datapack, the program name is `it`, otherwise it's whatever path you saved the pastebin file to (by default is `iturtle`). Just type the program name into a turtle's shell console and you'll be given a list of available subcommands.
+
+Note: If using the pastebin version, you'll need to run the program once first in order to get autocompleting subcommands.
+
+<br>
+
 ## Installation
 
 You can download this repo as a .zip file and use it as a datapack. If you're unsure how to install datapacks, read the tutorial on the [Minecraft wiki](https://minecraft.wiki/w/Tutorials/Installing_a_data_pack).
 
 Alternatively, you can download the source file directly using this command on any turtle in-game.
 ```
-pastebin get wui7eheN iturtle.lua
+pastebin get P6wD0Lpf iturtle.lua
 ```
 Just bear in mind the datapack version gets automatically inserted into every turtle's ROM directory, and therefore doesn't take up memory on their drive.
