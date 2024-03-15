@@ -473,6 +473,7 @@ function API.registerLocation(label, x, y, z)
         if not x then
             printError("No valid gps data found.")
             printError("Cannot implicitly set location.")
+            return
         end
     else
         x = tonumber(x)
@@ -480,7 +481,8 @@ function API.registerLocation(label, x, y, z)
         z = tonumber(z)
 
         if not x or not y or not z then
-            error("Invalid coordinates given.", 2)
+            printError("Invalid coordinates given.")
+            return
         end
     end
 
