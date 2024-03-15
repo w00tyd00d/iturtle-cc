@@ -631,6 +631,11 @@ function API.navigatePath(end_block, path_block, vert_block)
             if  block.name ~= nil and
                 block.name ~= "computercraft:turtle_normal" and
                 block.name ~= "computercraft:turtle_advanced" then
+
+                if block.name == end_block  then
+                    return true
+                end
+                
                 query_next_direction()
             end
         else
