@@ -535,7 +535,7 @@ function API.navigateLocal(x, y, z, order)
 
     if fuel and fuel < distance then
         printError("Not enough fuel, navigation cancelled.")
-        return
+        return false, "fuel"
     end
     
     local function resolve_axis(data)
@@ -589,6 +589,8 @@ function API.navigateLocal(x, y, z, order)
 
         dist = cache
     end
+
+    return true
 end
 
 function API.navigatePath(end_block, path_block, vert_block)
@@ -596,7 +598,7 @@ function API.navigatePath(end_block, path_block, vert_block)
 
     if not _current_direction then
         printError("No direction has been registered!")
-        return
+        return false, "compass"
     end
 
     end_block = end_block or "minecraft:chiseled_stone_bricks"
@@ -605,10 +607,10 @@ function API.navigatePath(end_block, path_block, vert_block)
     local direction = "forward"
     local block_data = API.blockDataDown
 
-    API.loop(function()
+    local _, res = API.loop(function()
         if API.getFuelLevel() == 0 then
             printError("Out of fuel.\nEnding navigation.")
-            return true
+            return "fuel"
         end
 
         local block = block_data()
@@ -658,6 +660,12 @@ function API.navigatePath(end_block, path_block, vert_block)
 
         API[direction]()
     end)
+
+    if res ~= true then
+        return false, res
+    end
+
+    return true
 end
 
 function API.navigateToPoint(x, y, z, order)
@@ -665,7 +673,7 @@ function API.navigateToPoint(x, y, z, order)
 
     if not _current_direction then
         printError("No direction has been registered!")
-        return
+        return false, "compass"
     end
 
     -- Not necessarily proud of how big this came out lol
@@ -752,47 +760,52 @@ function API.navigateToPoint(x, y, z, order)
             if err == "compass" then
                 printError("Compass not calibrated properly!\nEnding navigation.")
             end
-            return
+            return res, err
         end
 
         return true
     end
 
-    if not refresh_data() then return end
+    if not refresh_data() then return false, "gps" end
 
     local fuel = tonumber(API.getFuelLevel())
     local distance = math.abs(dist[1][2]) + math.abs(dist[2][2]) + math.abs(dist[3][2])
 
     if fuel and fuel < distance then
         printError("Not enough fuel, navigation cancelled.")
-        return
+        return false, "fuel"
     end
 
     if order then
         for i=1, math.min(3, #order) do
             local key = {x=1, y=2, z=3}
             local axis = order:sub(i,i)
-            if not resolve_axis(dist[key[axis]]) then
-                return false
+            local res, err = resolve_axis(dist[key[axis]])
+
+            if not res then
+                return false, err
             end
         end
     end
 
     while dist[1][2] ~= 0 or dist[2][2] ~= 0 or dist[3][2] ~= 0 do
-        if not refresh_data() then return end
+        if not refresh_data() then return false, "gps" end
 
         repeat
             table.sort(dist, function(a,b) return math.abs(a[2]) > math.abs(b[2]) end)
             local choice = table.remove(dist)
+            local res, err = resolve_axis(choice)
 
-            if not resolve_axis(choice) then
-                return false
+            if not res then
+                return false, err
             end
         until
             dist[1] == nil
 
-        if not refresh_data() then return end
+        if not refresh_data() then return false, "gps" end
     end
+
+    return true
 end
 
 function API.navigateToLocation(label, order)
@@ -804,7 +817,7 @@ function API.navigateToLocation(label, order)
     end
 
     local x, y, z = API.getLocation(label)
-    API.navigateToPoint(x, y, z, order)
+    return API.navigateToPoint(x, y, z, order)
 end
 
 
