@@ -628,7 +628,8 @@ function API.navigatePath(end_block, path_block, vert_block)
         end
 
         if direction == "up" or direction == "down" then
-            if block.name then
+            if  block.name ~= "computercraft:turtle_normal" and
+                block.name ~= "computercraft:turtle_advanced" then
                 query_next_direction()
             end
         else
