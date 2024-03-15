@@ -536,7 +536,7 @@ function API.navigateLocal(x, y, z, order)
     local distance = math.abs(dist[1][2]) + math.abs(dist[2][2]) + math.abs(dist[3][2])
 
     if fuel and fuel < distance then
-        printError("Not enough fuel, navigation cancelled.")
+        printError("Not enough fuel.\nNavigation cancelled.")
         return false, "fuel"
     end
     
@@ -778,7 +778,7 @@ function API.navigateToPoint(x, y, z, order)
     local distance = math.abs(dist[1][2]) + math.abs(dist[2][2]) + math.abs(dist[3][2])
 
     if fuel and fuel < distance then
-        printError("Not enough fuel, navigation cancelled.")
+        printError("Not enough fuel.\nNavigation cancelled.")
         return false, "fuel"
     end
 

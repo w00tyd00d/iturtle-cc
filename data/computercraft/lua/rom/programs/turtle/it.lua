@@ -2,10 +2,6 @@ local API = require("iturtle")
 
 local ARGS = {...}
 
-local function version_respons()
-    print("ITurtle Library Version "..API.getVersion())
-end
-
 local function compass_repsonse()
     local direction = API.getDirection()
 
@@ -23,14 +19,16 @@ local function order_response()
 end
 
 if #ARGS == 0 then
+    local name = arg[0] or fs.getName(shell.getRunningProgram())
+
     print("Usages:")
-    print("it version")
-    print("it compass <direction>")
-    print("it face <direction>")
-    print("it go <direction> <distance>")
-    print("it location <get|set|delete> <location>")
-    print("it navigate <local|global> <x> <y> <z>")
-    print("it navigate <to> <location>")
+    print(name, "version")
+    print(name, "compass <direction>")
+    print(name, "face <direction>")
+    print(name, "go <direction> <distance>")
+    print(name, "location <get|set|delete> <location>")
+    print(name, "navigate <local|global> <x> <y> <z>")
+    print(name, "navigate <to> <location>")
     return
 end
 
